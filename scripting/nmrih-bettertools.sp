@@ -41,7 +41,7 @@ public Plugin myinfo =
 	name        = "Better Tools",
 	author      = "Dysphie",
 	description = "Extended functionality for tools",
-	version     = "0.1.1",
+	version     = "0.1.2",
 	url         = ""
 };
 
@@ -62,11 +62,11 @@ public void OnPluginStart()
 	cvBarricadeHealth = FindConVar("sv_barricade_health");
 	cvBarricadeMdl = FindConVar("cl_barricade_board_model"); // ..why is this cl_
 
-	cvIgniteTime = CreateConVar("sm_zippo_use_time", 
-		"Seconds it takes the zippo to ignite an entity", "2.0");
+	cvIgniteTime = CreateConVar("sm_zippo_use_time", "2.0", 
+		"Seconds it takes the zippo to ignite an entity");
 
-	cvExtinguishTime = CreateConVar("sm_extinguisher_use_time", 
-		"Seconds it takes the fire extinguisher to extinguish an entity", "2.0");
+	cvExtinguishTime = CreateConVar("sm_extinguisher_use_time", "2.0",
+		"Seconds it takes the fire extinguisher to extinguish an entity");
 
 	cvExtEverywhere = FindConVar("sv_extinguisher_always_fire");
 
