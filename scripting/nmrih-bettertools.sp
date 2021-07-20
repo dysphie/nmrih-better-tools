@@ -16,6 +16,9 @@
 #define EXT_REMOVE 1 // Extinguish by removing
 #define EXT_EXT 2 // Extinguish by extinguishing..
 
+#define ACT_REACH_OUT_IDLE 7
+#define ACT_REACH_OUT_WALK 10
+
 float shouldExtinguishTime[MAX_ENTITIES+1] = {-1.0, ...};	// When the entity should be extinguished, should we not lose progress
 float lastSprayTime[MAX_ENTITIES+1] = {-1.0, ...};			// Next time we should spray this entity so as to not lose progress
 
@@ -31,7 +34,7 @@ ConVar cvExtEverywhere;
 ConVar cvTweakExt, cvTweakZippo, cvTweakBarr;
 ConVar cvIgniteHumans, cvIgniteZombies, cvIgniteProps;
 ConVar cvFF, cvBarricadeHealth, cvBarricadeMdl;
-
+ConVar cvZippoRange, cvExtinguishRange;
 
 bool qolPluginExists;
 bool lateloaded;
@@ -41,7 +44,7 @@ public Plugin myinfo =
 	name        = "Better Tools",
 	author      = "Dysphie",
 	description = "Extended functionality for tools",
-	version     = "0.1.2",
+	version     = "0.1.3",
 	url         = ""
 };
 
@@ -87,6 +90,9 @@ public void OnPluginStart()
 
 	cvIgniteProps = CreateConVar("sm_zippo_ignites_props", "1", 
 		"Zippo can ignite breakable wooden props and explosives");
+
+	cvZippoRange = CreateConVar("sm_zippo_range", "75.0");
+	cvExtinguishRange = CreateConVar("sm_extinguisher_range", "200.0");
 
 	if (lateloaded)
 	{
@@ -153,58 +159,66 @@ public void OnPlayerRunCmdPost(int client, int buttons, int impulse, const float
 	nextThink[client] = curTime + 0.1;
 
 	int curWeapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-	if (!IsValidEdict(curWeapon))
-		return;
-
-	char classname[32];
-	GetEntityClassname(curWeapon, classname, sizeof(classname));
-
-	if (cvTweakExt.BoolValue && StrEqual(classname, "tool_extinguisher") && 
-		GetEntProp(curWeapon, Prop_Data, "m_bHoseFiring"))
+	if (curWeapon != -1)
 	{
-		float hullAng[3], hullStart[3], hullEnd[3];
-		GetClientEyeAngles(client, hullAng);
-		GetClientEyePosition(client, hullStart);
-	
-		ForwardVector(hullStart, hullAng, 10.0, hullStart); // startPos is eyes + 8
-		ForwardVector(hullStart, hullAng, 300.0, hullEnd); // endPos is eyes + range
+		char classname[19];
+		GetEntityClassname(curWeapon, classname, sizeof(classname));
 
-		TR_EnumerateEntitiesHull(hullStart, hullEnd, 
-			{-16.0, -16.0, -16.0}, {16.0, 16.0, 16.0}, MASK_ALL, OnEntitySprayed);
-	}
-	else if (cvTweakZippo.BoolValue && StrEqual(classname, "item_zippo"))
-	{
-		if (!GetEntProp(curWeapon, Prop_Send, "_ignited"))
-			return;
-
-		#define ACT_REACH_OUT_IDLE 7
-		#define ACT_REACH_OUT_WALK 10
-
-		int act = GetEntProp(curWeapon, Prop_Send, "m_nSequence");
-		if (act != ACT_REACH_OUT_WALK && act != ACT_REACH_OUT_IDLE)
-			return;
-
-		int target = GetClientAimTarget(client, false);
-		if (IsValidEdict(target) && HasEntProp(target, Prop_Data, "m_vecAbsOrigin"))
-		{
-			float pos[3];
-			GetEntPropVector(target, Prop_Data, "m_vecAbsOrigin", pos);
-
-			float clientPos[3];
-			GetClientAbsOrigin(client, clientPos);
-
-			if (GetVectorDistance(clientPos, pos) > 70.0)
-				return;
-
-			OnEntityZippoed(target);
-		}
+		if (cvTweakExt.BoolValue && StrEqual(classname, "tool_extinguisher"))
+			FireExtinguisherThink(client, curWeapon);
+		else if (cvTweakZippo.BoolValue && StrEqual(classname, "item_zippo"))
+			ZippoThink(client, curWeapon);
 	}
 }
 
-void OnEntityZippoed(int entity)
+void FireExtinguisherThink(int client, int extinguisher)
+{
+	if (!GetEntProp(extinguisher, Prop_Data, "m_bHoseFiring"))
+		return;
+
+	float hullAng[3], hullStart[3], hullEnd[3];
+	GetClientEyeAngles(client, hullAng);
+	GetClientEyePosition(client, hullStart);
+
+	ForwardVector(hullStart, hullAng, cvExtinguishRange.FloatValue, hullEnd); // endPos is eyes + range
+
+	TR_EnumerateEntitiesHull(hullStart, hullEnd, 
+		{-20.0, -20.0, -20.0}, {20.0, 20.0, 20.0}, MASK_ALL, OnEntitySprayed);
+}
+
+public bool TraceFilter_IgnoreOne(int entity, int contentsMask, int ignore)
+{
+	return entity != ignore;
+}
+
+void ZippoThink(int client, int zippo)
+{
+	// Is zippo lit
+	if (!GetEntProp(zippo, Prop_Send, "_ignited"))
+		return;
+
+	// Is arm reaching out
+	int act = GetEntProp(zippo, Prop_Send, "m_nSequence");
+	if (act != ACT_REACH_OUT_WALK && act != ACT_REACH_OUT_IDLE)
+		return;
+
+	float eyePos[3], eyeAng[3], endPos[3];
+	GetClientEyePosition(client, eyePos);
+	GetClientEyeAngles(client, eyeAng);
+
+	ForwardVector(eyePos, eyeAng, cvZippoRange.FloatValue, endPos); 
+
+	TR_TraceRayFilter(eyePos, endPos, MASK_ALL, RayType_EndPoint, TraceFilter_IgnoreOne, client);
+
+	int target = TR_GetEntityIndex();
+	if (IsValidEdict(target))
+		OnEntityZippoed(target, TR_GetSurfaceProps());
+}
+
+void OnEntityZippoed(int entity, int surface)
 {
 	// Ignore if the entity is already on fire or it's being extinguished
-	if (!CheckCanIgnite(entity))
+	if (!CheckCanIgnite(entity, surface))
 	{
 		shouldIgniteTime[entity] == -1.0;
 		return;
@@ -271,8 +285,6 @@ bool OnEntitySprayed(int entity)
 
 int CheckCanExtinguish(int entity)
 {
-	PrintToServer("CheckCanExtinguish %d", entity);
-
 	if (!(GetEntityFlags(entity) & FL_ONFIRE))
 	{
 		char classname[20];
@@ -284,11 +296,8 @@ int CheckCanExtinguish(int entity)
 	}
 
 	if (IsEntityPlayer(entity) || IsEntityZombie(entity))
-	{
-		PrintToServer("EXT_EXT");
 		return EXT_EXT;
-	}
-
+	
 	char classname[20];
 	GetEntityClassname(entity, classname, sizeof(classname));
 	if (StrEqual(classname, "func_breakable") || StrContains(classname, "prop_physics") == 0)
@@ -297,18 +306,23 @@ int CheckCanExtinguish(int entity)
 	return EXT_NONE;
 }
 
-bool CheckCanIgnite(int entity)
+bool IsFlammableSurface(int idx)
+{
+	// Indexes foor wood/paper, taken from nmrih/scripts/surfaceproperties.txt
+	return 15 <= idx < 22 || idx == 28 || idx == 49 || idx == 73 || idx == 74;
+}
+
+bool CheckCanIgnite(int entity, int surface)
 {
 	if (GetEntityFlags(entity) & FL_ONFIRE)
 		return false;
 
 	if (IsEntityPlayer(entity))
-			return cvIgniteHumans.BoolValue && (cvFF.BoolValue || IsClientInfected(entity));
+		return cvIgniteHumans.BoolValue && (cvFF.BoolValue || IsClientInfected(entity));
 
 	if (IsEntityZombie(entity))
 		return cvIgniteZombies.BoolValue;
 
-	
 	if (cvIgniteProps.BoolValue)
 	{
 		char classname[20];
@@ -320,24 +334,20 @@ bool CheckCanIgnite(int entity)
 			return health > 0 && material == MATERIAL_WOOD;
 		}
 
-		if (StrContains(classname, "prop_physics") == 0)
-		{
-			// Just let explosives thru
-			if (GetEntPropFloat(entity, Prop_Data, "m_explodeRadius") > 0.0)
-				return true;
+		if (IsExplosiveEntity(entity))
+			return true;
 
-			// Else only ignite if wooden
-			if (GetEntProp(entity, Prop_Data, "m_iHealth") > 0)
-			{
-
-				char propMat[32];
-				GetEntPropString(entity, Prop_Data, "m_iszBasePropData", propMat, sizeof(propMat));
-				return StrContains(propMat, "wood", false) != -1;
-			}
-		}	
+		// Else only ignite wooden surfaces
+		return IsFlammableSurface(surface);
 	}
 
 	return false;
+}
+
+bool IsExplosiveEntity(int entity)
+{
+	return HasEntProp(entity, Prop_Data, "m_explodeRadius") && 
+		GetEntPropFloat(entity, Prop_Data, "m_explodeRadius") > 0.0;
 }
 
 public void OnEntityCreated(int entity, const char[] classname)
