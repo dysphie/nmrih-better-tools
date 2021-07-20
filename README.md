@@ -40,6 +40,8 @@ All configuration variables are saved to `cfg/sourcemod/plugin.nmrih-bettertools
 
 - sm_extinguisher_tweaks (Default: 1) - Toggle fire extinguisher tweaks on and off
 - sm_extinguisher_use_time (Default: 2) - Seconds it takes to extinguish an entity
+- sm_extinguisher_range (Default: 200) - Distance at which entities can be extinguished
+
 
 - sm_barricade_tweaks (Default: 1) - Toggle barricade tweaks on and off 
 
@@ -49,3 +51,4 @@ All configuration variables are saved to `cfg/sourcemod/plugin.nmrih-bettertools
 - sm_zippo_ignites_zombies (Default: 1) - Whether the zippo can ignite zombies
 - sm_zippo_ignites_props (Default: 1) - Whether the zippo can ignite breakable wooden props and explosives
 - sm_zippo_ignites_humans (Default: 0) - Whether the zippo can ignite players (abides by friendly fire and infection rules)
+- sm_zippo_range (Default: 75) - Distance at which zippo can ignite entities
