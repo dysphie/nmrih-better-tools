@@ -55,6 +55,9 @@ void OnMolotovDetonated(int molotov)
 
 int CreateMolotovInferno(int molotov, float pos[3])
 {
+	// Make molotov entity match the particle position
+	TeleportEntity(molotov, pos);
+
 	int particle = CreateEntityByName("info_particle_system");
 	DispatchKeyValue(particle, "targetname", "molotov_inferno");
 	DispatchKeyValue(particle, "effect_name", "nmrih_molotov_explosion");
