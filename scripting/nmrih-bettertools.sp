@@ -107,7 +107,7 @@ public void OnPluginStart()
 
 public void OnAllPluginsLoaded()
 {
-	qolPluginExists = FindConVar("qol") != -1;
+	qolPluginExists = FindConVar("qol") != null;
 }
 
 public void OnConfigsExecuted()
