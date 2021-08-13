@@ -44,7 +44,7 @@ public Plugin myinfo =
 	name        = "Better Tools",
 	author      = "Dysphie",
 	description = "Extended functionality for tools",
-	version     = "0.1.3",
+	version     = "0.1.4",
 	url         = ""
 };
 
@@ -107,19 +107,7 @@ public void OnPluginStart()
 
 public void OnAllPluginsLoaded()
 {
-	qolPluginExists = LibraryExists("qol");
-}
-
-public void OnLibraryAdded(const char[] name)
-{
-	if (StrEqual(name, "qol"))
-		qolPluginExists = true;
-}
-
-public void OnLibraryRemoved(const char[] name)
-{
-	if (StrEqual(name, "qol"))
-		qolPluginExists = false;
+	qolPluginExists = FindConVar("qol") != -1;
 }
 
 public void OnConfigsExecuted()
