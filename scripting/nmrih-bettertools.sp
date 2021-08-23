@@ -44,7 +44,7 @@ public Plugin myinfo =
 	name        = "Better Tools",
 	author      = "Dysphie",
 	description = "Extended functionality for tools",
-	version     = "0.1.4",
+	version     = "0.2.4",
 	url         = ""
 };
 
@@ -55,9 +55,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 
 public void OnPluginStart()
 {
-	if (GetFeatureStatus(FeatureType_Capability, "SDKHook_OnEntitySpawned") == FeatureStatus_Unavailable)
-		SetFailState("Requires SourceMod 1.11 or higher");
-
 	AddNormalSoundHook(OnSound);
 	AddTempEntHook("EffectDispatch", OnEffectDispatch);
 
@@ -98,8 +95,7 @@ public void OnPluginStart()
 	{
 		int e = -1;
 		while ((e = FindEntityByClassname(e, "prop_physics_multiplayer")) != -1)
-			if (IsEntityBarricade(e))
-				OnBarricadeSpawned(e);
+			OnPropPhysSpawned(e);
 	}
 
 	AutoExecConfig();
@@ -340,6 +336,9 @@ bool IsExplosiveEntity(int entity)
 
 public void OnEntityCreated(int entity, const char[] classname)
 {
+	if (StrEqual(classname, "prop_physics_multiplayer"))
+		SDKHook(entity, SDKHook_SpawnPost, OnPropPhysSpawned);
+
 	if (IsValidEdict(entity))
 	{
 		shouldExtinguishTime[entity] = -1.0;
@@ -454,12 +453,6 @@ bool IsClientInfected(int client)
 	return GetEntPropFloat(client, Prop_Send, "m_flInfectionTime") != -1.0;
 }
 
-public void OnEntitySpawned(int entity, const char[] classname)
-{
-	if (StrEqual(classname, "prop_physics_multiplayer") && IsEntityBarricade(entity))
-		OnBarricadeSpawned(entity);
-}
-
 bool IsEntityBarricade(int entity)
 {
 	static char model[PLATFORM_MAX_PATH];
@@ -471,7 +464,8 @@ bool IsEntityBarricade(int entity)
 	return StrEqual(model, barricadeModel);
 }
 
-public void OnBarricadeSpawned(int barricade)
+public void OnPropPhysSpawned(int prop)
 {
-	SDKHook(barricade, SDKHook_OnTakeDamage, OnBarricadeDamaged);
+	if (IsEntityBarricade(prop))
+		SDKHook(prop, SDKHook_OnTakeDamage, OnBarricadeDamaged);
 }
