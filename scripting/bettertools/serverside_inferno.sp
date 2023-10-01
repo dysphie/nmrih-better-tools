@@ -1,6 +1,6 @@
-/* 
+/*
  * Moves molotov particle effects to the server side and links
- * them to the molotov projectile so they can be extinguished 
+ * them to the molotov projectile so they can be extinguished
  */
 
 int lastDetonated = INVALID_ENT_REFERENCE;
@@ -18,7 +18,7 @@ public Action OnEffectDispatch(const char[] te_name, const int[] players, int nu
 		int hitbox = TE_ReadNum("m_nHitBox");
 		GetParticleEffectName(hitbox, buffer, sizeof(buffer));
 
-		if (StrEqual(buffer, "nmrih_molotov_explosion") && 
+		if (StrEqual(buffer, "nmrih_molotov_explosion") &&
 			IsValidEntity(lastDetonated) && lastDetonatedTick == GetGameTickCount())
 		{
 			// Move the effect to the server side so we can remove it at will
@@ -29,7 +29,7 @@ public Action OnEffectDispatch(const char[] te_name, const int[] players, int nu
 
 			CreateMolotovInferno(lastDetonated, pos);
 			return Plugin_Handled;
-		}	
+		}
 	}
 
 	return Plugin_Continue;
@@ -42,9 +42,12 @@ public Action OnSound(int clients[MAXPLAYERS], int& numClients, char sample[PLAT
 		char classname[20];
 		GetEntityClassname(entity, classname, sizeof(classname));
 
-		if (StrEqual(classname, "molotov_projectile"))
+		if (StrEqual(classname, "molotov_projectile")) {
 			OnMolotovDetonated(entity);
+		}
 	}
+
+	return Plugin_Continue;
 }
 
 void OnMolotovDetonated(int molotov)
@@ -76,19 +79,19 @@ int CreateMolotovInferno(int molotov, float pos[3])
 int GetParticleEffectName(int index, char[] buffer, int maxlen)
 {
 	static int table = INVALID_STRING_TABLE;
-	
+
 	if (table == INVALID_STRING_TABLE)
 		table = FindStringTable("ParticleEffectNames");
-	
+
 	return ReadStringTable(table, index, buffer, maxlen);
 }
 
 int GetEffectName(int index, char[] buffer, int maxlen)
 {
 	static int table = INVALID_STRING_TABLE;
-	
+
 	if (table == INVALID_STRING_TABLE)
 		table = FindStringTable("EffectDispatch");
-	
-	ReadStringTable(table, index, buffer, maxlen);
+
+	return ReadStringTable(table, index, buffer, maxlen);
 }
