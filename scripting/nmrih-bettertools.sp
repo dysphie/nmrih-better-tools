@@ -41,7 +41,7 @@ bool qolPluginExists;
 bool lateloaded;
 
 #define PLUGIN_DESCRIPTION "Extends or improves tools functionality"
-#define PLUGIN_VERSION "0.3.4"
+#define PLUGIN_VERSION "0.3.5"
 
 public Plugin myinfo =
 {
@@ -182,7 +182,7 @@ void FireExtinguisherThink(int client, int extinguisher)
 	ForwardVector(hullStart, hullAng, cvExtinguishRange.FloatValue, hullEnd); // endPos is eyes + range
 
 	TR_EnumerateEntitiesHull(hullStart, hullEnd,
-		{-20.0, -20.0, -20.0}, {20.0, 20.0, 20.0}, MASK_ALL, OnEntitySprayed);
+		{-20.0, -20.0, -20.0}, {20.0, 20.0, 20.0}, PARTITION_NON_STATIC_EDICTS, OnEntitySprayed);
 }
 
 public bool TraceFilter_IgnoreOne(int entity, int contentsMask, int ignore)
